@@ -8,7 +8,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -24,7 +23,7 @@ type Block struct {
 
 func (b *Block) CreateHash() {
 	cr := sha256.New()
-	sum := b.Payload.ToString()
+	sum := b.Payload.ToBytes()
 	sum = append(b.PreviousHash, byte(b.Nonce))
 
 	cr.Write(sum)
@@ -42,7 +41,7 @@ type Payload struct {
 	Signature []byte
 }
 
-func (p Payload) ToString() []byte {
+func (p Payload) ToBytes() []byte {
 	b, err := json.Marshal(p)
 	if err != nil {
 		panic(err)
@@ -76,6 +75,7 @@ func (p *Payload) Sign() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(pk.N.String())
+
+	p.Node = x509.MarshalPKCS1PublicKey(&pk.PublicKey)
 	p.Signature, err = rsa.SignPKCS1v15(rand.Reader, pk, crypto.SHA256, d)
 }
