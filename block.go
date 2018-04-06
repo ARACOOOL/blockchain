@@ -51,13 +51,8 @@ func (p Payload) ToBytes() []byte {
 }
 
 func (p *Payload) Sign() {
-	jsonByte, err := json.Marshal(p.Data)
-	if err != nil {
-		panic(err)
-	}
-
 	cr := sha256.New()
-	cr.Write(jsonByte)
+	cr.Write(p.ToBytes())
 	d := cr.Sum(nil)
 
 	prvFile, err := os.OpenFile("keys/prv", os.O_RDONLY, 0644)
