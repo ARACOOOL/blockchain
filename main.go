@@ -1,17 +1,10 @@
 package main
 
-import (
-	"time"
-
-	"github.com/davecgh/go-spew/spew"
-)
+var blockchain *BlockChain
 
 func main() {
-	d := Payload{Data: PayloadData{FirstName: "s", LastName: "f"}}
-	d.Sign()
+	blockchain = &BlockChain{}
 
-	block := &Block{Timestamp: time.Now().Unix(), PreviousHash: []byte(`0000000000000000000000000000000000000000000000000000000000000000`), Nonce: 23423, Payload: d}
-	block.CreateHash()
-
-	spew.Dump(block)
+	block := CreateNewBlock(Block{}, PayloadData{FirstName: "s", LastName: "f"})
+	blockchain.AddBlock(block)
 }

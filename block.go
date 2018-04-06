@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
@@ -10,7 +11,9 @@ import (
 	"encoding/pem"
 	"io/ioutil"
 	"log"
+	mathRand "math/rand"
 	"os"
+	"time"
 )
 
 type Block struct {
@@ -21,13 +24,49 @@ type Block struct {
 	Payload      Payload
 }
 
-func (b *Block) CreateHash() {
+func CreateHash(b Block) []byte {
 	cr := sha256.New()
 	sum := b.Payload.ToBytes()
 	sum = append(b.PreviousHash, byte(b.Nonce))
 
 	cr.Write(sum)
-	b.Hash = cr.Sum(nil)
+	return cr.Sum(nil)
+}
+
+func CreateNewBlock(block Block, data PayloadData) Block {
+	payload := &Payload{Data: data}
+	payload.Sign()
+
+	newBlock := Block{Timestamp: time.Now().Unix(), PreviousHash: block.Hash, Nonce: mathRand.Int(), Payload: *payload}
+	newBlock.Hash = CreateHash(newBlock)
+
+	return newBlock
+}
+
+func IsValidBlock(oldBlock Block, newBlock Block) bool {
+	if bytes.Compare(oldBlock.Hash, newBlock.PreviousHash) == 0 {
+		return false
+	}
+
+	if bytes.Compare(CreateHash(newBlock), newBlock.Hash) == 0 {
+		return false
+	}
+
+	cr := sha256.New()
+	cr.Write(newBlock.Payload.ToBytes())
+	d := cr.Sum(nil)
+
+	pubKey, err := x509.ParsePKCS1PublicKey(newBlock.Payload.Node)
+	if err != nil {
+		return false
+	}
+
+	err = rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, d, newBlock.Payload.Signature)
+	if err != nil {
+		return false
+	}
+
+	return true
 }
 
 type PayloadData struct {
