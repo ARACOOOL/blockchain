@@ -16,11 +16,15 @@ func (chain *BlockChain) AddBlock(block Block) {
 
 	if len(chain.blocks) > 0 {
 		lastBlock := chain.blocks[len(chain.blocks)-1]
-		if !IsValidBlock(lastBlock, block) {
-			log.Fatal("Block is invalid")
+		if !IsBlockValid(lastBlock, block) {
+			log.Println("Block is invalid")
 			return
 		}
 	}
 
 	chain.blocks = append(chain.blocks, block)
+}
+
+func (chain *BlockChain) GetLastBlock() Block {
+	return chain.blocks[len(chain.blocks)-1]
 }

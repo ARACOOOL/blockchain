@@ -1,10 +1,23 @@
 package main
 
+import (
+	"log"
+
+	"github.com/joho/godotenv"
+)
+
 var blockchain *BlockChain
 
 func main() {
 	blockchain = &BlockChain{}
 
-	block := CreateNewBlock(Block{}, PayloadData{FirstName: "s", LastName: "f"})
-	blockchain.AddBlock(block)
+	genesisBlock := CreateNewBlock(Block{}, PayloadData{})
+	blockchain.AddBlock(genesisBlock)
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	StartServer()
 }

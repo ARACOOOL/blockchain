@@ -16,6 +16,8 @@ import (
 	"time"
 )
 
+const NonceMax  = 99999999
+
 type Block struct {
 	Timestamp    int64
 	Hash         []byte
@@ -27,7 +29,10 @@ type Block struct {
 func CreateHash(b Block) []byte {
 	cr := sha256.New()
 	sum := b.Payload.ToBytes()
-	sum = append(b.PreviousHash, byte(b.Nonce))
+	sum = append(sum, byte(b.Nonce))
+	sum = append(sum, b.PreviousHash...)
+	sum = append(sum, b.Payload.Node...)
+	sum = append(sum, b.Payload.Signature...)
 
 	cr.Write(sum)
 	return cr.Sum(nil)
@@ -37,18 +42,20 @@ func CreateNewBlock(block Block, data PayloadData) Block {
 	payload := &Payload{Data: data}
 	payload.Sign()
 
-	newBlock := Block{Timestamp: time.Now().Unix(), PreviousHash: block.Hash, Nonce: mathRand.Int(), Payload: *payload}
+	newBlock := Block{Timestamp: time.Now().UnixNano(), PreviousHash: block.Hash, Nonce: mathRand.Intn(NonceMax), Payload: *payload}
 	newBlock.Hash = CreateHash(newBlock)
 
 	return newBlock
 }
 
-func IsValidBlock(oldBlock Block, newBlock Block) bool {
-	if bytes.Compare(oldBlock.Hash, newBlock.PreviousHash) == 0 {
+func IsBlockValid(oldBlock Block, newBlock Block) bool {
+	if bytes.Compare(oldBlock.Hash, newBlock.PreviousHash) != 0 {
+		log.Println("Previous hash invalid")
 		return false
 	}
 
-	if bytes.Compare(CreateHash(newBlock), newBlock.Hash) == 0 {
+	if bytes.Compare(CreateHash(newBlock), newBlock.Hash) != 0 {
+		log.Println("New block hash is invalid")
 		return false
 	}
 
@@ -58,11 +65,13 @@ func IsValidBlock(oldBlock Block, newBlock Block) bool {
 
 	pubKey, err := x509.ParsePKCS1PublicKey(newBlock.Payload.Node)
 	if err != nil {
+		log.Println("Public is invalid")
 		return false
 	}
 
 	err = rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, d, newBlock.Payload.Signature)
 	if err != nil {
+		log.Println("Signature is invalid")
 		return false
 	}
 
@@ -81,7 +90,7 @@ type Payload struct {
 }
 
 func (p Payload) ToBytes() []byte {
-	b, err := json.Marshal(p)
+	b, err := json.Marshal(p.Data)
 	if err != nil {
 		panic(err)
 	}
